@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/johnswift/goelevenlabs/internal/audio"
-	"github.com/johnswift/goelevenlabs/internal/config"
-	"github.com/johnswift/goelevenlabs/internal/eleven"
-	"github.com/johnswift/goelevenlabs/internal/scene"
+	"github.com/swiftj/goelevenlabs/internal/audio"
+	"github.com/swiftj/goelevenlabs/internal/config"
+	"github.com/swiftj/goelevenlabs/internal/eleven"
+	"github.com/swiftj/goelevenlabs/internal/scene"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

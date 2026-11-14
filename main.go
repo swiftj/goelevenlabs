@@ -20,8 +20,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/johnswift/goelevenlabs/internal/scene"
-	"github.com/johnswift/goelevenlabs/internal/server"
+	"github.com/swiftj/goelevenlabs/internal/scene"
+	"github.com/swiftj/goelevenlabs/internal/server"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

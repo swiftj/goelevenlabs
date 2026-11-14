@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/johnswift/goelevenlabs/internal/eleven"
+	"github.com/swiftj/goelevenlabs/internal/eleven"
 )
 
 // CastMember maps a character name to a voice, remembered across sessions.

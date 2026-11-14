@@ -1,5 +1,5 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 1.0.0)
-LDFLAGS := -s -w -X github.com/johnswift/goelevenlabs/internal/server.Version=$(VERSION)
+LDFLAGS := -s -w -X github.com/swiftj/goelevenlabs/internal/server.Version=$(VERSION)
 BIN := bin/goelevenlabs
 
 .PHONY: build test install release clean

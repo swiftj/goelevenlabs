@@ -14,7 +14,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/johnswift/goelevenlabs/internal/eleven"
+	"github.com/swiftj/goelevenlabs/internal/eleven"
 )
 
 // PronEntry says how to pronounce a term. Exactly one of Alias, IPA or CMU is set.

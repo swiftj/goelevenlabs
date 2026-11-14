@@ -74,13 +74,14 @@ The cast is stored in `~/.config/goelevenlabs/cast.json`. To see credit usage, t
 ## Build and install
 
 ```bash
+go install github.com/swiftj/goelevenlabs@latest   # or build from a clone:
 make build      # bin/goelevenlabs (CGO_ENABLED=0, -trimpath, stripped)
 make test
 make release    # static binaries for darwin/linux/windows
 ```
 
-- **Claude Desktop:** `claude_desktop_config.json` → `mcpServers.goelevenlabs.command = /Users/johnswift/Projects/goelevenlabs/bin/goelevenlabs`
-- **Claude Code:** `claude mcp add --scope user goelevenlabs -- /Users/johnswift/Projects/goelevenlabs/bin/goelevenlabs`
+- **Claude Desktop:** `claude_desktop_config.json` → add `"goelevenlabs": {"command": "/absolute/path/to/goelevenlabs"}` under `mcpServers`
+- **Claude Code:** `claude mcp add --scope user goelevenlabs -- /absolute/path/to/goelevenlabs`
 - **CLI:** `goelevenlabs render scene.txt`, `goelevenlabs render -dry scene.json`, `goelevenlabs status`
 
 ## Roadmap ideas

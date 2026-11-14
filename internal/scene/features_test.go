@@ -3,7 +3,7 @@ package scene
 import (
 	"testing"
 
-	"github.com/johnswift/goelevenlabs/internal/eleven"
+	"github.com/swiftj/goelevenlabs/internal/eleven"
 )
 
 func TestAliaser(t *testing.T) {

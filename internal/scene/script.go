@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/johnswift/goelevenlabs/internal/eleven"
+	"github.com/swiftj/goelevenlabs/internal/eleven"
 )
 
 // Line is one spoken line.

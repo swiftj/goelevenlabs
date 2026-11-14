@@ -1,4 +1,4 @@
-module github.com/johnswift/goelevenlabs
+module github.com/swiftj/goelevenlabs
 
 go 1.27.3
 

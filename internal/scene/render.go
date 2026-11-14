@@ -16,8 +16,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/johnswift/goelevenlabs/internal/audio"
-	"github.com/johnswift/goelevenlabs/internal/eleven"
+	"github.com/swiftj/goelevenlabs/internal/audio"
+	"github.com/swiftj/goelevenlabs/internal/eleven"
 	"golang.org/x/sync/errgroup"
 )
 
