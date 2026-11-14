@@ -95,3 +95,7 @@ make release    # static binaries for darwin/linux/windows
 7. **Source import:** render read-aloud boxes straight from Obsidian/LegendKeeper notes.
 8. **Budget guard:** a pre-render credit estimate, and a per-render spending cap.
 9. **Streamable HTTP transport**, so the server can be used from other machines and claude.ai.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
