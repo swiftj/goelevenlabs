@@ -20,9 +20,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/swiftj/goelevenlabs/internal/scene"
 	"github.com/swiftj/goelevenlabs/internal/server"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
