@@ -74,6 +74,7 @@ These numbers come from a test render: 3 lines, music, ambience and one SFX.
 - **Re-render after a level change: 0.94 s, 0 credits.** Every API response is cached by its content (`~/Library/Caches/goelevenlabs`), so changing levels, cue positions or mix settings re-uses audio already generated. Pass `fresh: true` for a new take.
 - **Mixing is fast:** a 60 s mix with ducking, loudness measurement and limiting takes about 0.11 s.
 - **Long scripts** are split into blocks of 1,900 characters or fewer. With `eleven_v3`, which doesn't accept continuity hints, those blocks render in parallel.
+- **Lean context:** the tool list costs about 6k tokens per session. Results come back as compact JSON with no duplicate structured copy. `search_voices` returns name, ID, category and labels (pass `details: true` for descriptions). Scene results return line timings; the full timeline is in `.cues.json`. The full script guide is available as the `scene_script_guide` prompt.
 - **API calls** reuse HTTP/2 connections, retry with backoff on 429/5xx (honouring `Retry-After`), and run at most 4 at a time (`max_concurrency`).
 - **MP3 encoding** uses ffmpeg/LAME (VBR V2) when it is installed, and otherwise a built-in pure-Go encoder (128k CBR). WAV output is always pure Go.
 

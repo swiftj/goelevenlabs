@@ -17,8 +17,8 @@ type CastMember struct {
 	VoiceID string          `json:"voice_id"`
 	Voice   string          `json:"voice_name,omitempty"`
 	Notes   string          `json:"notes,omitempty"`
-	Group   string          `json:"group,omitempty" jsonschema:"optional grouping such as a campaign or project name"`
-	Effects *eleven.Effects `json:"effects,omitempty" jsonschema:"default voice effects for this character (e.g. a lich always in hall reverb, a sending stone through phone)"`
+	Group   string          `json:"group,omitempty"`
+	Effects *eleven.Effects `json:"effects,omitempty" jsonschema:"default voice effects"`
 }
 
 // Cast is a JSON-file backed cast list.

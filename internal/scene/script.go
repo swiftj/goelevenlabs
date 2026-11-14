@@ -13,30 +13,30 @@ import (
 
 // Line is one spoken line.
 type Line struct {
-	Speaker    string          `json:"speaker,omitempty" jsonschema:"speaker name; resolved through voices, then the saved cast, then voice library names"`
-	VoiceID    string          `json:"voice_id,omitempty" jsonschema:"explicit voice_id (overrides speaker lookup)"`
-	Text       string          `json:"text" jsonschema:"what is said; eleven_v3 audio tags like [whispers] [angry] [laughs] [sighs] work inline"`
-	PauseAfter float64         `json:"pause_after,omitempty" jsonschema:"seconds of silence after this line"`
-	Effects    *eleven.Effects `json:"effects,omitempty" jsonschema:"voice effects for just this line (overrides character effects; {} means none)"`
+	Speaker    string          `json:"speaker,omitempty" jsonschema:"cast/library name"`
+	VoiceID    string          `json:"voice_id,omitempty"`
+	Text       string          `json:"text" jsonschema:"may include [audio tags]"`
+	PauseAfter float64         `json:"pause_after,omitempty" jsonschema:"seconds"`
+	Effects    *eleven.Effects `json:"effects,omitempty" jsonschema:"this line only; {} = none"`
 }
 
 // Cue is a music bed, ambience bed or one-shot sound effect.
 type Cue struct {
-	Prompt          string   `json:"prompt,omitempty" jsonschema:"text prompt to generate the sound or music"`
-	File            string   `json:"file,omitempty" jsonschema:"use an existing local .mp3/.wav instead of generating"`
-	At              string   `json:"at,omitempty" jsonschema:"SFX position. Anchors: start | end | line:N (start of line N, 1-based) | after:N (end of line N) | seconds, each optionally +/-offset, e.g. after:3+0.4"`
-	From            string   `json:"from,omitempty" jsonschema:"bed start anchor (default start)"`
-	To              string   `json:"to,omitempty" jsonschema:"bed end anchor (default end)"`
-	GainDB          *float64 `json:"gain_db,omitempty" jsonschema:"level in dB (defaults: music -15, ambience -24, sfx -6)"`
+	Prompt          string   `json:"prompt,omitempty"`
+	File            string   `json:"file,omitempty"`
+	At              string   `json:"at,omitempty"`
+	From            string   `json:"from,omitempty"`
+	To              string   `json:"to,omitempty"`
+	GainDB          *float64 `json:"gain_db,omitempty"`
 	FadeIn          *float64 `json:"fade_in,omitempty"`
 	FadeOut         *float64 `json:"fade_out,omitempty"`
-	Pan             float64  `json:"pan,omitempty" jsonschema:"-1 left .. 1 right"`
-	DurationSec     float64  `json:"duration_sec,omitempty" jsonschema:"SFX length 0.5-30 s (default: model decides)"`
-	PromptInfluence *float64 `json:"prompt_influence,omitempty" jsonschema:"SFX prompt adherence 0-1"`
-	Vocals          bool     `json:"vocals,omitempty" jsonschema:"music only: allow vocals (default instrumental)"`
-	Model           string   `json:"model,omitempty" jsonschema:"override model (music_v1/music_v2/music_v2_5; eleven_text_to_sound_v2/v3)"`
+	Pan             float64  `json:"pan,omitempty"`
+	DurationSec     float64  `json:"duration_sec,omitempty"`
+	PromptInfluence *float64 `json:"prompt_influence,omitempty"`
+	Vocals          bool     `json:"vocals,omitempty"`
+	Model           string   `json:"model,omitempty"`
 	Seed            *int64   `json:"seed,omitempty"`
-	Duck            *bool    `json:"duck,omitempty" jsonschema:"duck under dialogue (default true for music, false otherwise)"`
+	Duck            *bool    `json:"duck,omitempty"`
 }
 
 var (

@@ -143,17 +143,17 @@ func refs(list []string) ([]map[string]any, error) {
 func (a *App) addMediaTools(s *mcp.Server) {
 	// ------------------------------------------------------------ voice design
 	type designIn struct {
-		Description    string   `json:"description" jsonschema:"who the voice is: age, gender, accent, timbre, pace, attitude, e.g. 'ancient lich, dry rasping whisper, cold aristocratic calm, slow'"`
-		Text           string   `json:"text,omitempty" jsonschema:"line the previews speak (100-1000 characters); omit to auto-generate one"`
-		Model          string   `json:"model,omitempty" jsonschema:"eleven_ttv_v3 (default, most expressive) or eleven_multilingual_ttv_v2"`
-		GuidanceScale  *float64 `json:"guidance_scale,omitempty" jsonschema:"how literally to follow the description (default 5); lower with long, detailed descriptions"`
+		Description    string   `json:"description" jsonschema:"age, gender, accent, timbre, pace, attitude"`
+		Text           string   `json:"text,omitempty" jsonschema:"100-1000 chars; omit to auto-generate"`
+		Model          string   `json:"model,omitempty" jsonschema:"eleven_ttv_v3 (default) | eleven_multilingual_ttv_v2"`
+		GuidanceScale  *float64 `json:"guidance_scale,omitempty" jsonschema:"default 5"`
 		Loudness       *float64 `json:"loudness,omitempty" jsonschema:"-1 quiet .. 1 loud (default 0.5)"`
 		Seed           *int64   `json:"seed,omitempty"`
 		Enhance        bool     `json:"enhance,omitempty" jsonschema:"let ElevenLabs expand a short description"`
-		ReferenceAudio string   `json:"reference_audio,omitempty" jsonschema:"eleven_ttv_v3 only: local audio file whose voice to steer toward"`
-		PromptStrength *float64 `json:"prompt_strength,omitempty" jsonschema:"with reference_audio: 0 = mostly reference, 1 = mostly description"`
+		ReferenceAudio string   `json:"reference_audio,omitempty" jsonschema:"local audio to steer toward (v3)"`
+		PromptStrength *float64 `json:"prompt_strength,omitempty" jsonschema:"0 reference .. 1 description"`
 		Play           int      `json:"play,omitempty" jsonschema:"play preview N (1-based) right away on the Mac"`
-		Fresh          bool     `json:"fresh,omitempty" jsonschema:"new candidates instead of the cached ones for this description"`
+		Fresh          bool     `json:"fresh,omitempty" jsonschema:"new candidates"`
 	}
 	type preview struct {
 		N                int     `json:"n"`
@@ -167,7 +167,7 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		Cached   bool      `json:"cached,omitempty"`
 		Next     string    `json:"next"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "design_voice", Description: "Design a brand-new voice from a description (Text to Voice). Returns several previews saved as MP3s; listen, then keep one with save_designed_voice (which can also add it to the cast)."},
+	addTool(s, &mcp.Tool{Name: "design_voice", Description: "Design a brand-new voice from a description (Text to Voice). Returns several previews saved as MP3s; listen, then keep one with save_designed_voice (which can also add it to the cast)."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in designIn) (*mcp.CallToolResult, *designOut, error) {
 			if strings.TrimSpace(in.Description) == "" {
 				return nil, nil, errors.New("description is required")
@@ -222,7 +222,7 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		Name    string `json:"name"`
 		CastAs  string `json:"cast_as,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "save_designed_voice", Description: "Keep a design_voice preview as a permanent voice in your ElevenLabs library, optionally assigning it to a cast character in one step."},
+	addTool(s, &mcp.Tool{Name: "save_designed_voice", Description: "Keep a design_voice preview as a permanent voice in your ElevenLabs library, optionally assigning it to a cast character in one step."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in saveIn) (*mcp.CallToolResult, *saveOut, error) {
 			if in.GeneratedVoiceID == "" || in.Name == "" {
 				return nil, nil, errors.New("generated_voice_id and name are required")
@@ -262,11 +262,11 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		Seed        *int64   `json:"seed,omitempty" jsonschema:"Seedream only"`
 		Filename    string   `json:"filename,omitempty"`
 		OutputDir   string   `json:"output_dir,omitempty" jsonschema:"default <output>/images"`
-		WaitSec     int      `json:"wait_sec,omitempty" jsonschema:"how long to wait for the result (default 180)"`
-		Fresh       bool     `json:"fresh,omitempty" jsonschema:"new image even if this exact request was made before"`
+		WaitSec     int      `json:"wait_sec,omitempty" jsonschema:"default 180"`
+		Fresh       bool     `json:"fresh,omitempty" jsonschema:"new image, not the cached one"`
 		Open        bool     `json:"open,omitempty" jsonschema:"open the image in Preview when done (macOS)"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "generate_image", Description: "Generate or edit an image with ElevenLabs image models (Gemini, Seedream): character portraits, locations, scene cards. Saves the file and returns a generation reference you can reuse for edits or as a video's start_frame / talking_portrait image."},
+	addTool(s, &mcp.Tool{Name: "generate_image", Description: "Generate or edit an image with ElevenLabs image models (Gemini, Seedream): character portraits, locations, scene cards. Saves the file and returns a generation reference you can reuse for edits or as a video's start_frame / talking_portrait image."},
 		func(ctx context.Context, req *mcp.CallToolRequest, in imageIn) (*mcp.CallToolResult, *MediaOut, error) {
 			if strings.TrimSpace(in.Prompt) == "" {
 				return nil, nil, errors.New("prompt is required")
@@ -313,8 +313,8 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		Images        []string `json:"images,omitempty" jsonschema:"seedance: reference images (subjects); aurora: the character image"`
 		Videos        []string `json:"videos,omitempty" jsonschema:"seedance: reference videos (motion/subjects)"`
 		Audios        []string `json:"audios,omitempty" jsonschema:"seedance: reference audio; aurora: the speech to lip-sync"`
-		Confirm       bool     `json:"confirm,omitempty" jsonschema:"video generation is billed: without confirm:true nothing is sent and a summary is returned"`
-		WaitSec       int      `json:"wait_sec,omitempty" jsonschema:"how long to wait (default 300); longer jobs return a generation_id for check_generation"`
+		Confirm       bool     `json:"confirm,omitempty" jsonschema:"required to generate (billed)"`
+		WaitSec       int      `json:"wait_sec,omitempty" jsonschema:"default 300; then use check_generation"`
 		Filename      string   `json:"filename,omitempty"`
 		OutputDir     string   `json:"output_dir,omitempty" jsonschema:"default <output>/video"`
 		Fresh         bool     `json:"fresh,omitempty"`
@@ -404,7 +404,7 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		}
 		return strings.Join(parts, ", ")
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "generate_video", Description: "Generate a short video with ElevenLabs video models: Veo 3.1 Fast (text or first/last frame, 4-8 s), Seedance 2.5 (reference images/videos/audio, up to 1080p) or Creatify Aurora (lip-sync). Video is billed: the first call without confirm:true only returns what would be sent."},
+	addTool(s, &mcp.Tool{Name: "generate_video", Description: "Generate a short video with ElevenLabs video models: Veo 3.1 Fast (text or first/last frame, 4-8 s), Seedance 2.5 (reference images/videos/audio, up to 1080p) or Creatify Aurora (lip-sync). Video is billed: the first call without confirm:true only returns what would be sent."},
 		func(ctx context.Context, req *mcp.CallToolRequest, in videoIn) (*mcp.CallToolResult, *MediaOut, error) {
 			body, model, err := buildVideo(in)
 			if err != nil {
@@ -425,13 +425,13 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		})
 
 	type portraitIn struct {
-		Image      string          `json:"image" jsonschema:"character portrait: local image, generation:<id> (e.g. from generate_image) or asset:<id>"`
-		Text       string          `json:"text,omitempty" jsonschema:"line to speak; rendered with the speaker's voice, pronunciation lexicon and effects"`
+		Image      string          `json:"image" jsonschema:"local image, generation:<id> or asset:<id>"`
+		Text       string          `json:"text,omitempty" jsonschema:"line to speak"`
 		Speaker    string          `json:"speaker,omitempty" jsonschema:"cast name, library voice name or voice_id"`
 		Audio      string          `json:"audio,omitempty" jsonschema:"use an existing speech file instead of text"`
-		Effects    *eleven.Effects `json:"voice_effects,omitempty" jsonschema:"voice effects for the line (default: the character's cast effects)"`
+		Effects    *eleven.Effects `json:"voice_effects,omitempty" jsonschema:"default: cast effects"`
 		Resolution string          `json:"resolution,omitempty" jsonschema:"480p or 720p (default 720p)"`
-		Confirm    bool            `json:"confirm,omitempty" jsonschema:"video is billed: without confirm:true only the speech is rendered and a summary returned"`
+		Confirm    bool            `json:"confirm,omitempty" jsonschema:"required to generate the video (billed); without it only the speech is rendered"`
 		WaitSec    int             `json:"wait_sec,omitempty"`
 		Filename   string          `json:"filename,omitempty"`
 		Open       bool            `json:"open,omitempty"`
@@ -440,7 +440,7 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		*MediaOut
 		AudioFile string `json:"audio_file"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "talking_portrait", Description: "Make a character portrait speak: renders the line in the character's voice (cast, lexicon and voice effects apply), then lip-syncs the image to it with Creatify Aurora. The first call without confirm:true renders only the speech (cheap, cached) so you can check it."},
+	addTool(s, &mcp.Tool{Name: "talking_portrait", Description: "Make a character portrait speak: renders the line in the character's voice (cast, lexicon and voice effects apply), then lip-syncs the image to it with Creatify Aurora. The first call without confirm:true renders only the speech (cheap, cached) so you can check it."},
 		func(ctx context.Context, req *mcp.CallToolRequest, in portraitIn) (*mcp.CallToolResult, *portraitOut, error) {
 			if in.Image == "" {
 				return nil, nil, errors.New("image is required")
@@ -490,7 +490,7 @@ func (a *App) addMediaTools(s *mcp.Server) {
 		Filename     string `json:"filename,omitempty"`
 		OutputDir    string `json:"output_dir,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "check_generation", Description: "Check an image/video generation that was still running, and download it when complete.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+	addTool(s, &mcp.Tool{Name: "check_generation", Description: "Check an image/video generation that was still running, and download it when complete.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(ctx context.Context, req *mcp.CallToolRequest, in checkIn) (*mcp.CallToolResult, *MediaOut, error) {
 			kind := eleven.MediaKind(strings.ToLower(in.Kind))
 			if kind != eleven.KindImage && kind != eleven.KindVideo {

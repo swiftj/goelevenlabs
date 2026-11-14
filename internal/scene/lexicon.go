@@ -24,12 +24,12 @@ import (
 // synced to an ElevenLabs pronunciation dictionary that is attached to each request
 // (honoured by eleven_v3, eleven_v4, eleven_v4_turbo and eleven_flash_v2).
 type PronEntry struct {
-	Term          string `json:"term" jsonschema:"word or phrase as written, e.g. Szass Tam"`
-	Alias         string `json:"alias,omitempty" jsonschema:"respelling that sounds right, e.g. Sass Tahm"`
-	IPA           string `json:"ipa,omitempty" jsonschema:"IPA phonemes, e.g. sæs tɑːm"`
-	CMU           string `json:"cmu,omitempty" jsonschema:"CMU Arpabet phonemes, e.g. S AE1 S T AA1 M"`
+	Term          string `json:"term"`
+	Alias         string `json:"alias,omitempty" jsonschema:"respelling"`
+	IPA           string `json:"ipa,omitempty"`
+	CMU           string `json:"cmu,omitempty" jsonschema:"CMU Arpabet"`
 	CaseSensitive bool   `json:"case_sensitive,omitempty"`
-	Group         string `json:"group,omitempty" jsonschema:"optional campaign/project grouping"`
+	Group         string `json:"group,omitempty"`
 	Notes         string `json:"notes,omitempty"`
 }
 

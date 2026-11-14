@@ -75,6 +75,16 @@ Video is billed: those tools return a summary until called again with confirm:tr
 return a generation_id; collect them with check_generation. Results can be reused as references
 with "generation:<id>".`
 
+// renderDesc is the compact syntax reference sent with the tool list; the full
+// guide is the scene_script_guide prompt.
+const renderDesc = `Render a script into ONE mixed audio file: multi-voice dialogue (eleven_v3) + music that ducks under speech + ambience + SFX, normalised to -16 LUFS, with .srt and .cues.json. Cached by content; dry_run first for big scenes.
+Script: "NAME: text" lines ([whispers] etc. tags allowed); untagged lines continue the speaker. Tags on own lines, placed where they appear:
+{sfx: prompt|file=PATH | -6dB | pan=-0.5 | 2s | at=+0.4}  {music: prompt | -15dB | fade=3}  {music: stop}  {ambience: prompt | -24dB}  {pause: 1.5}
+{voicefx: NAME|all | env=hall | filter=phone | noise=cafe | distance=0-1 | send=0-1 | pan=-1..1}  {voicefx: NAME | none}
+Anchors (at/from/to, also in music/ambience/sfx arrays): start, end, line:N, after:N, seconds; +/- offset. Other cue options: fadein/fadeout, influence, vocals, duck/noduck, model.
+Effects ids: env small_room|big_room|hall|tunnel|street|valley|forest; filter phone|old_radio|robot|cheap_microphone|low_quality_phone|bright_phone; noise call_center|cafe|city|keyboard.
+Speakers resolve via voices, then the cast, then library names. Pronunciation lexicon applies automatically.`
+
 const scriptGuide = `# Scene script syntax (render_scene "script")
 
 NARRATOR: [softly] Night falls over the ruins of Thay.
@@ -113,10 +123,10 @@ func (a *App) New() *mcp.Server {
 			return &mcp.GetPromptResult{Messages: []*mcp.PromptMessage{{Role: "user", Content: &mcp.TextContent{Text: scriptGuide}}}}, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "render_scene", Description: "Render a scripted scene into ONE mixed audio file: multi-voice dialogue (eleven_v3, up to 10 voices per block) + music beds that duck under speech + looping ambience + sound effects placed relative to lines. Loudness-normalised (-16 LUFS), writes .srt subtitles and a .cues.json cue sheet, optional stems. Generation runs in parallel and is cached by content. Script syntax:\n" + scriptGuide},
+	addTool(s, &mcp.Tool{Name: "render_scene", Description: renderDesc},
 		func(ctx context.Context, req *mcp.CallToolRequest, sp scene.Spec) (*mcp.CallToolResult, *scene.Result, error) {
 			r, err := scene.Render(ctx, a.Env(progressFn(ctx, req)), sp)
-			return nil, r, err
+			return nil, slim(r), err
 		})
 
 	type dialogueIn struct {
@@ -132,7 +142,7 @@ func (a *App) New() *mcp.Server {
 		CharacterEffects map[string]eleven.Effects `json:"character_effects,omitempty" jsonschema:"speaker -> voice effects"`
 		Fresh            bool                      `json:"fresh,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "generate_dialogue", Description: "Multi-voice dialogue only (no music/effects) as ONE audio file with per-line timings and .srt. Long scripts are split into continuity-linked requests automatically. Same script syntax as render_scene."},
+	addTool(s, &mcp.Tool{Name: "generate_dialogue", Description: "Multi-voice dialogue only (no music/effects) as ONE audio file with per-line timings and .srt. Long scripts are split into continuity-linked requests automatically. Same script syntax as render_scene."},
 		func(ctx context.Context, req *mcp.CallToolRequest, in dialogueIn) (*mcp.CallToolResult, *scene.Result, error) {
 			sp := scene.Spec{Script: in.Script, Lines: in.Lines, Voices: in.Voices, Filename: in.Filename, OutputDir: in.OutputDir,
 				Format: in.Format, Model: in.Model, Stability: in.Stability, VoiceEffects: in.VoiceEffects, Fresh: in.Fresh}
@@ -146,11 +156,11 @@ func (a *App) New() *mcp.Server {
 			}
 			sp.CharacterEffects = in.CharacterEffects
 			r, err := scene.Render(ctx, a.Env(progressFn(ctx, req)), sp)
-			return nil, r, err
+			return nil, slim(r), err
 		})
 
 	type sfxIn struct {
-		Prompt          string   `json:"prompt" jsonschema:"what the sound is, e.g. 'heavy wooden door creaks open, echoing stone hall'"`
+		Prompt          string   `json:"prompt" jsonschema:"what the sound is"`
 		DurationSec     float64  `json:"duration_sec,omitempty" jsonschema:"0.5-30; omit to let the model decide"`
 		Loop            bool     `json:"loop,omitempty" jsonschema:"seamlessly loopable (ambience)"`
 		PromptInfluence *float64 `json:"prompt_influence,omitempty"`
@@ -159,7 +169,7 @@ func (a *App) New() *mcp.Server {
 		OutputDir       string   `json:"output_dir,omitempty"`
 		Fresh           bool     `json:"fresh,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "generate_sound_effect", Description: "Generate one sound effect (or a seamless loop) and save it as MP3."},
+	addTool(s, &mcp.Tool{Name: "generate_sound_effect", Description: "Generate one sound effect (or a seamless loop) and save it as MP3."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in sfxIn) (*mcp.CallToolResult, *FileOut, error) {
 			r := eleven.SFXRequest{Text: in.Prompt, Loop: in.Loop, PromptInfluence: in.PromptInfluence, ModelID: in.Model}
 			if in.DurationSec > 0 {
@@ -175,7 +185,7 @@ func (a *App) New() *mcp.Server {
 
 	type musicIn struct {
 		Prompt          string          `json:"prompt,omitempty" jsonschema:"genre, mood, instruments, tempo"`
-		CompositionPlan json.RawMessage `json:"composition_plan,omitempty" jsonschema:"advanced: ElevenLabs composition plan (sections with styles and durations) instead of prompt"`
+		CompositionPlan json.RawMessage `json:"composition_plan,omitempty" jsonschema:"advanced, instead of prompt"`
 		LengthSec       float64         `json:"length_sec,omitempty" jsonschema:"3-600; omit to let the model decide"`
 		Vocals          bool            `json:"vocals,omitempty" jsonschema:"allow vocals (default instrumental)"`
 		Model           string          `json:"model,omitempty" jsonschema:"music_v1 (default), music_v2, music_v2_5"`
@@ -183,7 +193,7 @@ func (a *App) New() *mcp.Server {
 		OutputDir       string          `json:"output_dir,omitempty"`
 		Fresh           bool            `json:"fresh,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "generate_music", Description: "Compose music (instrumental by default) and save it as MP3."},
+	addTool(s, &mcp.Tool{Name: "generate_music", Description: "Compose music (instrumental by default) and save it as MP3."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in musicIn) (*mcp.CallToolResult, *FileOut, error) {
 			r := eleven.MusicRequest{Prompt: in.Prompt, CompositionPlan: in.CompositionPlan, ModelID: in.Model}
 			if len(in.CompositionPlan) == 0 {
@@ -203,27 +213,43 @@ func (a *App) New() *mcp.Server {
 		})
 
 	type voicesIn struct {
-		Search   string `json:"search,omitempty" jsonschema:"filter by name/description/labels"`
-		Category string `json:"category,omitempty" jsonschema:"premade, cloned, generated, professional"`
-		Limit    int    `json:"limit,omitempty" jsonschema:"max results (default 30, max 100)"`
+		Search   string `json:"search,omitempty" jsonschema:"name/description/labels"`
+		Category string `json:"category,omitempty" jsonschema:"premade|cloned|generated|professional"`
+		Limit    int    `json:"limit,omitempty" jsonschema:"default 30, max 100"`
+		Details  bool   `json:"details,omitempty" jsonschema:"include descriptions"`
+	}
+	type voiceRow struct {
+		Name        string `json:"name"`
+		VoiceID     string `json:"voice_id"`
+		Category    string `json:"category,omitempty"`
+		Labels      string `json:"labels,omitempty"`
+		Description string `json:"description,omitempty"`
 	}
 	type voicesOut struct {
-		Voices []eleven.Voice `json:"voices"`
+		Voices []voiceRow `json:"voices"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "search_voices", Description: "Search your ElevenLabs voice library (premade, designed, cloned, professional) for voice_ids.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+	addTool(s, &mcp.Tool{Name: "search_voices", Description: "Search your ElevenLabs voice library for voice_ids.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in voicesIn) (*mcp.CallToolResult, *voicesOut, error) {
 			lim := in.Limit
 			if lim <= 0 {
 				lim = 30
 			}
 			v, err := a.Client.Voices(ctx, in.Search, in.Category, min(lim, 100))
-			for i := range v {
-				v[i].PreviewURL = ""
-				if len(v[i].Description) > 200 {
-					v[i].Description = v[i].Description[:200] + "…"
-				}
+			if err != nil {
+				return nil, nil, err
 			}
-			return nil, &voicesOut{v}, err
+			out := &voicesOut{Voices: make([]voiceRow, 0, len(v))}
+			for _, x := range v {
+				r := voiceRow{Name: x.Name, VoiceID: x.VoiceID, Category: x.Category, Labels: compactLabels(x.Labels)}
+				if in.Details {
+					r.Description = x.Description
+					if len(r.Description) > 200 {
+						r.Description = r.Description[:200] + "…"
+					}
+				}
+				out.Voices = append(out.Voices, r)
+			}
+			return nil, out, nil
 		})
 
 	type castIn struct {
@@ -240,7 +266,7 @@ func (a *App) New() *mcp.Server {
 		Cast    []scene.CastMember `json:"cast,omitempty"`
 		Message string             `json:"message,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "manage_cast", Description: "Remember which voice (and optional voice effects) plays which character across sessions, so scripts can just say 'SKERRIT: …'. set updates only the fields you give."},
+	addTool(s, &mcp.Tool{Name: "manage_cast", Description: "Remember which voice (and optional voice effects) plays which character across sessions, so scripts can just say 'SKERRIT: …'. set updates only the fields you give."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in castIn) (*mcp.CallToolResult, *castOut, error) {
 			switch strings.ToLower(in.Action) {
 			case "list", "":
@@ -326,8 +352,8 @@ func (a *App) New() *mcp.Server {
 		Pan     float64 `json:"pan,omitempty"`
 	}
 	type mixIn struct {
-		Tracks     []mixTrack `json:"tracks" jsonschema:"clips to place on the timeline; use start = previous end to concatenate"`
-		Sequence   bool       `json:"sequence,omitempty" jsonschema:"ignore start and play tracks back to back (simple concatenation)"`
+		Tracks     []mixTrack `json:"tracks" jsonschema:"clips on the timeline"`
+		Sequence   bool       `json:"sequence,omitempty" jsonschema:"play back to back, ignoring start"`
 		Gap        float64    `json:"gap,omitempty" jsonschema:"seconds between tracks when sequence is true"`
 		DuckDB     *float64   `json:"duck_db,omitempty" jsonschema:"music dip under dialogue, default -12"`
 		TargetLUFS *float64   `json:"target_lufs,omitempty" jsonschema:"default -16; 0 disables"`
@@ -342,7 +368,7 @@ func (a *App) New() *mcp.Server {
 		PeakDB  float64 `json:"peak_dbfs"`
 		Encoder string  `json:"encoder"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "mix_audio", Description: "Mix or join existing local audio files (mp3/wav) on a timeline: concatenate clips, lay music under dialogue with automatic ducking, add effects. Runs locally, costs no credits."},
+	addTool(s, &mcp.Tool{Name: "mix_audio", Description: "Mix or join existing local audio files (mp3/wav) on a timeline: concatenate clips, lay music under dialogue with automatic ducking, add effects. Runs locally, costs no credits."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mixIn) (*mcp.CallToolResult, *mixOut, error) {
 			if len(in.Tracks) == 0 {
 				return nil, nil, errors.New("no tracks")
@@ -412,7 +438,7 @@ func (a *App) New() *mcp.Server {
 		ServerVersion string  `json:"server_version"`
 		Note          string  `json:"note,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "account_status", Description: "Show ElevenLabs plan and credits left, plus this server's cache and settings.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+	addTool(s, &mcp.Tool{Name: "account_status", Description: "Show ElevenLabs plan and credits left, plus this server's cache and settings.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, *acctOut, error) {
 			sub, err := a.Client.Subscription(ctx)
 			note := ""
@@ -437,13 +463,13 @@ func (a *App) New() *mcp.Server {
 		})
 
 	type playIn struct {
-		File string `json:"file,omitempty" jsonschema:"audio file to play; omit with stop:true to stop playback"`
+		File string `json:"file,omitempty"`
 		Stop bool   `json:"stop,omitempty"`
 	}
 	type playOut struct {
 		Message string `json:"message"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "play_audio", Description: "Play an audio file on this Mac's speakers (afplay), or stop playback. Returns immediately."},
+	addTool(s, &mcp.Tool{Name: "play_audio", Description: "Play an audio file on this Mac's speakers (afplay), or stop playback. Returns immediately."},
 		func(_ context.Context, _ *mcp.CallToolRequest, in playIn) (*mcp.CallToolResult, *playOut, error) {
 			a.player.Lock()
 			defer a.player.Unlock()
@@ -482,7 +508,7 @@ func (a *App) New() *mcp.Server {
 	type listOut struct {
 		Files []listItem `json:"files"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "list_outputs", Description: "List recently rendered audio files (newest first).", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+	addTool(s, &mcp.Tool{Name: "list_outputs", Description: "List recently rendered audio files (newest first).", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(_ context.Context, _ *mcp.CallToolRequest, in listIn) (*mcp.CallToolResult, *listOut, error) {
 			root := a.dir(in.Dir)
 			var items []listItem
@@ -511,16 +537,16 @@ func (a *App) New() *mcp.Server {
 	type pronIn struct {
 		Action        string            `json:"action" jsonschema:"list | set | remove | sync | preview"`
 		Term          string            `json:"term,omitempty" jsonschema:"word or phrase as written, e.g. Szass Tam"`
-		Alias         string            `json:"alias,omitempty" jsonschema:"respelling that sounds right (works with every model)"`
+		Alias         string            `json:"alias,omitempty" jsonschema:"respelling; works with every model"`
 		IPA           string            `json:"ipa,omitempty" jsonschema:"IPA phonemes (eleven_v3/v4/flash_v2 only)"`
-		CMU           string            `json:"cmu,omitempty" jsonschema:"CMU Arpabet phonemes (eleven_v3/v4/flash_v2 only)"`
+		CMU           string            `json:"cmu,omitempty" jsonschema:"CMU Arpabet"`
 		CaseSensitive bool              `json:"case_sensitive,omitempty"`
 		Group         string            `json:"group,omitempty" jsonschema:"campaign/project grouping; also filters list"`
 		Notes         string            `json:"notes,omitempty"`
 		Entries       []scene.PronEntry `json:"entries,omitempty" jsonschema:"bulk set: several entries at once"`
 		Terms         []string          `json:"terms,omitempty" jsonschema:"bulk remove"`
-		Text          string            `json:"text,omitempty" jsonschema:"preview: sentence to speak (default: the term)"`
-		Voice         string            `json:"voice,omitempty" jsonschema:"preview: speaker name (cast/library) or voice_id"`
+		Text          string            `json:"text,omitempty" jsonschema:"preview sentence (default: term)"`
+		Voice         string            `json:"voice,omitempty" jsonschema:"preview speaker or voice_id"`
 		Model         string            `json:"model,omitempty" jsonschema:"preview model (default eleven_v3)"`
 		Play          bool              `json:"play,omitempty" jsonschema:"preview: play it on the Mac's speakers"`
 	}
@@ -532,7 +558,7 @@ func (a *App) New() *mcp.Server {
 		File       string            `json:"file,omitempty"`
 		SpokenAs   string            `json:"sent_text,omitempty"`
 	}
-	mcp.AddTool(s, &mcp.Tool{Name: "manage_pronunciation", Description: "Pronunciation lexicon applied to every render so names are always said the same way (Szass Tam, Thay, Pyarados…). " +
+	addTool(s, &mcp.Tool{Name: "manage_pronunciation", Description: "Pronunciation lexicon applied to every render so names are always said the same way (Szass Tam, Thay, Pyarados…). " +
 		"Alias rules (respellings) are applied locally and work with every model; IPA/CMU phoneme rules sync to an ElevenLabs pronunciation dictionary " +
 		"(needs the API key's Pronunciation Dictionaries permission = Write) and work with eleven_v3/v4/flash_v2. preview speaks a term or sentence so you can check it."},
 		func(ctx context.Context, req *mcp.CallToolRequest, in pronIn) (*mcp.CallToolResult, *pronOut, error) {
@@ -606,7 +632,7 @@ func (a *App) New() *mcp.Server {
 
 	a.addMediaTools(s)
 
-	mcp.AddTool(s, &mcp.Tool{Name: "voice_effects_catalog", Description: "List the valid voice effect IDs (filter presets, reverb environments, background noises) for voicefx / character_effects / cast effects.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+	addTool(s, &mcp.Tool{Name: "voice_effects_catalog", Description: "List the valid voice effect IDs (filter presets, reverb environments, background noises) for voicefx / character_effects / cast effects.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, *eleven.EffectsCatalog, error) {
 			c, err := a.Client.Catalog(ctx)
 			return nil, c, err
@@ -633,6 +659,23 @@ func def(s, d string) string {
 		return d
 	}
 	return s
+}
+
+// addTool registers a tool whose result goes back as compact JSON text only:
+// no output schema in the tool list and no duplicate structuredContent copy,
+// which roughly halves what each call costs in context.
+func addTool[In, Out any](s *mcp.Server, t *mcp.Tool, h func(context.Context, *mcp.CallToolRequest, In) (*mcp.CallToolResult, Out, error)) {
+	mcp.AddTool(s, t, func(ctx context.Context, req *mcp.CallToolRequest, in In) (*mcp.CallToolResult, any, error) {
+		_, out, err := h(ctx, req, in)
+		if err != nil {
+			return nil, nil, err
+		}
+		b, err := json.Marshal(out)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil, nil
+	})
 }
 
 func (a *App) dir(d string) string {
@@ -702,3 +745,45 @@ func slug(s string) string {
 }
 
 func r2(v float64) float64 { return math.Round(v*100) / 100 }
+
+// compactLabels turns {"gender":"male","age":"old","accent":"british"} into "male, old, british".
+func compactLabels(m map[string]string) string {
+	order := []string{"gender", "age", "accent", "descriptive", "use_case", "language"}
+	seen := map[string]bool{}
+	var parts []string
+	add := func(k string) {
+		if v := strings.TrimSpace(m[k]); v != "" && !seen[k] {
+			seen[k] = true
+			parts = append(parts, strings.ReplaceAll(v, "_", " "))
+		}
+	}
+	for _, k := range order {
+		add(k)
+	}
+	rest := make([]string, 0, len(m))
+	for k := range m {
+		rest = append(rest, k)
+	}
+	sort.Strings(rest)
+	for _, k := range rest {
+		add(k)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// slim drops per-line text and voice ids from a scene result before it goes back to
+// the model (it wrote the script; the .cues.json file keeps everything).
+func slim(r *scene.Result) *scene.Result {
+	if r == nil {
+		return nil
+	}
+	c := *r
+	c.Timeline = make([]scene.TimedLine, len(r.Timeline))
+	for i, t := range r.Timeline {
+		c.Timeline[i] = scene.TimedLine{N: t.N, Speaker: t.Speaker, Start: t.Start, End: t.End}
+	}
+	if r.DryRun {
+		c.Timeline = nil // the cast map already shows who resolves to which voice
+	}
+	return &c
+}

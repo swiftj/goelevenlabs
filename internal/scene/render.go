@@ -24,36 +24,36 @@ import (
 // Spec describes a scene to render.
 type Spec struct {
 	Title    string            `json:"title,omitempty"`
-	Script   string            `json:"script,omitempty" jsonschema:"screenplay text. 'NAME: line' for dialogue; {sfx: prompt | -8dB | pan=-0.5 | 2s}, {music: prompt | -16dB | fade=3}, {ambience: prompt}, {music: stop}, {pause: 1.5} on their own lines. Tags are placed where they appear."`
-	Lines    []Line            `json:"lines,omitempty" jsonschema:"structured alternative/addition to script"`
-	Voices   map[string]string `json:"voices,omitempty" jsonschema:"speaker name -> voice_id for this scene (else the saved cast, else voice library names)"`
+	Script   string            `json:"script,omitempty" jsonschema:"screenplay text (syntax in tool description)"`
+	Lines    []Line            `json:"lines,omitempty" jsonschema:"alternative to script"`
+	Voices   map[string]string `json:"voices,omitempty" jsonschema:"speaker -> voice_id"`
 	Music    []Cue             `json:"music,omitempty"`
 	Ambience []Cue             `json:"ambience,omitempty"`
 	SFX      []Cue             `json:"sfx,omitempty"`
 
-	Model            string                    `json:"model,omitempty" jsonschema:"dialogue model, default eleven_v3"`
-	Language         string                    `json:"language,omitempty" jsonschema:"ISO 639-1 code to force a language"`
-	Stability        *float64                  `json:"stability,omitempty" jsonschema:"0 creative, 0.5 natural, 1 robust"`
+	Model            string                    `json:"model,omitempty" jsonschema:"default eleven_v3"`
+	Language         string                    `json:"language,omitempty" jsonschema:"ISO 639-1"`
+	Stability        *float64                  `json:"stability,omitempty" jsonschema:"0-1"`
 	Seed             *int64                    `json:"seed,omitempty"`
-	VoiceEffects     *eleven.Effects           `json:"voice_effects,omitempty" jsonschema:"default server-side voice effects for every line (reverb space, filter, distance, pan)"`
-	CharacterEffects map[string]eleven.Effects `json:"character_effects,omitempty" jsonschema:"speaker -> voice effects for this scene, e.g. {\"SZASS TAM\": {\"environment_id\": \"hall\", \"send_level\": 0.6}}. Overrides the cast's saved effects."`
-	NoPronunciation  bool                      `json:"no_pronunciation,omitempty" jsonschema:"skip the pronunciation lexicon for this render"`
+	VoiceEffects     *eleven.Effects           `json:"voice_effects,omitempty" jsonschema:"all lines"`
+	CharacterEffects map[string]eleven.Effects `json:"character_effects,omitempty" jsonschema:"speaker -> effects"`
+	NoPronunciation  bool                      `json:"no_pronunciation,omitempty"`
 
-	LeadIn     *float64 `json:"lead_in,omitempty" jsonschema:"seconds before the first line (default 0.6)"`
-	Tail       *float64 `json:"tail,omitempty" jsonschema:"seconds after the last line (default 2)"`
-	LengthSec  float64  `json:"length_sec,omitempty" jsonschema:"total length for a soundscape with no dialogue"`
-	DuckDB     *float64 `json:"duck_db,omitempty" jsonschema:"how far music dips under speech, default -12 (0 disables)"`
-	TargetLUFS *float64 `json:"target_lufs,omitempty" jsonschema:"integrated loudness target, default -16 (podcast); 0 disables"`
+	LeadIn     *float64 `json:"lead_in,omitempty" jsonschema:"s, default 0.6"`
+	Tail       *float64 `json:"tail,omitempty" jsonschema:"s, default 2"`
+	LengthSec  float64  `json:"length_sec,omitempty" jsonschema:"soundscape without dialogue"`
+	DuckDB     *float64 `json:"duck_db,omitempty" jsonschema:"default -12"`
+	TargetLUFS *float64 `json:"target_lufs,omitempty" jsonschema:"default -16; 0 off"`
 
-	Filename  string `json:"filename,omitempty" jsonschema:"output name without extension"`
+	Filename  string `json:"filename,omitempty"`
 	OutputDir string `json:"output_dir,omitempty"`
-	Format    string `json:"format,omitempty" jsonschema:"mp3 (default) or wav"`
-	Stems     bool   `json:"stems,omitempty" jsonschema:"also write dialogue/music/effects stems"`
-	NoSubs    bool   `json:"no_subtitles,omitempty" jsonschema:"skip the .srt subtitle file"`
+	Format    string `json:"format,omitempty" jsonschema:"mp3|wav"`
+	Stems     bool   `json:"stems,omitempty"`
+	NoSubs    bool   `json:"no_subtitles,omitempty"`
 
-	Fresh            bool `json:"fresh,omitempty" jsonschema:"ignore the cache and generate new takes"`
-	DryRun           bool `json:"dry_run,omitempty" jsonschema:"validate, resolve voices and report size without generating"`
-	ParallelDialogue bool `json:"parallel_dialogue,omitempty" jsonschema:"render dialogue blocks concurrently (faster for long scripts, loses cross-block prosody continuity)"`
+	Fresh            bool `json:"fresh,omitempty" jsonschema:"bypass cache"`
+	DryRun           bool `json:"dry_run,omitempty" jsonschema:"validate only"`
+	ParallelDialogue bool `json:"parallel_dialogue,omitempty"`
 }
 
 // Env is what the renderer needs from the host.
@@ -70,8 +70,8 @@ type Env struct {
 type TimedLine struct {
 	N       int     `json:"n"`
 	Speaker string  `json:"speaker"`
-	VoiceID string  `json:"voice_id"`
-	Text    string  `json:"text"`
+	VoiceID string  `json:"voice_id,omitempty"`
+	Text    string  `json:"text,omitempty"`
 	Start   float64 `json:"start"`
 	End     float64 `json:"end"`
 }

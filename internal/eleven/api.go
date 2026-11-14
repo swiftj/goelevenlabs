@@ -22,12 +22,12 @@ type DialogueInput struct {
 
 // Effects maps to the API's EffectsSpec (server-side voice processing).
 type Effects struct {
-	FilterPresetID    string   `json:"filter_preset_id,omitempty" jsonschema:"voice filter: phone, old_radio, robot, cheap_microphone, low_quality_phone, bright_phone"`
-	EnvironmentID     string   `json:"environment_id,omitempty" jsonschema:"reverb space: small_room, big_room, hall, tunnel, street, valley, forest"`
-	BackgroundNoiseID string   `json:"background_noise_id,omitempty" jsonschema:"noise bed: call_center, cafe, city, keyboard"`
-	Distance          *float64 `json:"distance,omitempty" jsonschema:"0 near to 1 far"`
-	SendLevel         *float64 `json:"send_level,omitempty" jsonschema:"reverb send 0-1"`
-	Pan               *float64 `json:"pan,omitempty" jsonschema:"-1 left to 1 right"`
+	FilterPresetID    string   `json:"filter_preset_id,omitempty"`
+	EnvironmentID     string   `json:"environment_id,omitempty"`
+	BackgroundNoiseID string   `json:"background_noise_id,omitempty"`
+	Distance          *float64 `json:"distance,omitempty"`
+	SendLevel         *float64 `json:"send_level,omitempty"`
+	Pan               *float64 `json:"pan,omitempty"`
 }
 
 // IsZero reports whether no effect is set.
