@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/swiftj/goelevenlabs/internal/audio"
 	"github.com/swiftj/goelevenlabs/internal/config"
 	"github.com/swiftj/goelevenlabs/internal/eleven"
 	"github.com/swiftj/goelevenlabs/internal/scene"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Version is set at build time.
@@ -66,7 +66,14 @@ loudness-normalised, with .srt subtitles and a cue sheet. Workflow:
 3. render_scene with dry_run:true to check voices and size, then without it to render.
 4. Identical requests are cached, so re-rendering after changing levels or cues costs no credits;
    pass fresh:true for a new take. Use play_audio to listen (macOS).
-Read the prompt "scene_script_guide" for the script syntax.`
+Read the prompt "scene_script_guide" for the script syntax.
+
+Beyond audio: design_voice + save_designed_voice create new character voices from a description
+(and can add them to the cast); generate_image makes portraits and scene art; generate_video
+(Veo / Seedance) and talking_portrait (a portrait lip-synced to a rendered line) make video.
+Video is billed: those tools return a summary until called again with confirm:true. Long jobs
+return a generation_id; collect them with check_generation. Results can be reused as references
+with "generation:<id>".`
 
 const scriptGuide = `# Scene script syntax (render_scene "script")
 
@@ -596,6 +603,8 @@ func (a *App) New() *mcp.Server {
 			}
 			return nil, nil, fmt.Errorf("unknown action %q", in.Action)
 		})
+
+	a.addMediaTools(s)
 
 	mcp.AddTool(s, &mcp.Tool{Name: "voice_effects_catalog", Description: "List the valid voice effect IDs (filter presets, reverb environments, background noises) for voicefx / character_effects / cast effects.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, *eleven.EffectsCatalog, error) {

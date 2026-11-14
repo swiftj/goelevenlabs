@@ -109,11 +109,7 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 	}
 	var keyFile string
 	if cacheable && c.cache != "" {
-		h := sha256.New()
-		fmt.Fprintf(h, "%s\n%s\n", method, u)
-		h.Write(body)
-		sum := hex.EncodeToString(h.Sum(nil))
-		keyFile = filepath.Join(c.cache, sum[:2], sum)
+		keyFile = c.keyFile(method, u, body)
 		if b, err := os.ReadFile(keyFile + ".bin"); err == nil {
 			var m meta
 			if mb, err := os.ReadFile(keyFile + ".json"); err == nil {
@@ -228,4 +224,30 @@ func (c *Client) CacheStats() (files int, bytes int64) {
 		return nil
 	})
 	return
+}
+
+func (c *Client) keyFile(method, u string, body []byte) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "%s\n%s\n", method, u)
+	h.Write(body)
+	sum := hex.EncodeToString(h.Sum(nil))
+	return filepath.Join(c.cache, sum[:2], sum)
+}
+
+// Forget drops one cached response so the next identical request goes to the API.
+func (c *Client) Forget(method, path string, query url.Values, jsonBody any) {
+	if c.cache == "" {
+		return
+	}
+	body, err := json.Marshal(jsonBody)
+	if err != nil || jsonBody == nil {
+		body = nil
+	}
+	u := c.base + path
+	if len(query) > 0 {
+		u += "?" + query.Encode()
+	}
+	k := c.keyFile(method, u, body)
+	_ = os.Remove(k + ".bin")
+	_ = os.Remove(k + ".json")
 }

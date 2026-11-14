@@ -13,6 +13,11 @@ A single static Go binary (`CGO_ENABLED=0`, ~9 MB, no runtime dependencies) that
 | `search_voices`, `manage_cast` | Find voices; remember which voice plays which character, and their default voice effects |
 | `manage_pronunciation` | Lexicon of names to always pronounce a certain way: `set`, `remove`, `list`, `sync`, and `preview` (speaks a test sentence) |
 | `voice_effects_catalog` | Valid effect names: reverb rooms, filters (phone, old_radio…), background noises |
+| `design_voice`, `save_designed_voice` | Create a new voice from a description: several previews are saved as MP3s, and the one you keep goes into your voice library and, optionally, straight into the cast |
+| `generate_image` | Portraits and scene art (Gemini 3.x / 2.5 image models, Seedream 5), with optional reference images for edits or a consistent look |
+| `generate_video` | Short clips with Veo 3.1 Fast (4–8 s, text or first/last frame), Seedance 2.5 (reference images, video or audio) or Creatify Aurora (lip-sync). **Billed:** calls without `confirm: true` only return a summary |
+| `talking_portrait` | Renders a line in a character's voice (cast, lexicon and effects apply) and lip-syncs a portrait to it. Speech is rendered first, so you can check it before paying for video |
+| `check_generation` | Collects an image or video that was still generating when its tool call returned |
 | `account_status`, `list_outputs`, `play_audio` | Credits and cache; recent renders; play a file on the Mac's speakers (`afplay`) |
 
 There is also a prompt, `scene_script_guide`, describing the script syntax.
@@ -50,6 +55,16 @@ The lexicon (`~/.config/goelevenlabs/lexicon.json`) is applied to every render; 
 Effects come from, highest priority first: the line itself, then `{voicefx:}` in the script, then the scene's `character_effects`, then the cast's saved effects, then the scene's `voice_effects`.
 
 The `audio_effects` setting applies to a whole request, so lines with different effects are rendered as separate blocks. With eleven_v3 those blocks render in parallel. Each block starts 0.3 s after the previous block's speech ends, measured from voice timestamps rather than the end of the clip, so reverb tails ring naturally under the next line. Effect names are checked against the live catalog before anything is generated.
+
+## Voice design, images and video
+
+- **Voice design** works on every plan. Text-to-Voice v3 previews are cached by description; pass `fresh: true` for new candidates.
+- **Image and video generation** go through ElevenLabs' `/v1/flows` API, which **needs a Pro plan or above**. On lower plans the tools say so, and nothing is charged.
+- **Generations run in the background:** tools wait (images up to 180 s, video up to 300 s by default) and save the result to `<output>/images`, `<output>/video` or `<output>/portraits`.
+- **Reuse:** every result can be passed on as `generation:<id>`, e.g. an image as a video's `start_frame` or as a `talking_portrait` image.
+- **References** can be local files (sent inline, up to 25 MB), `generation:<id>` or `asset:<id>`.
+- **Downloads** come from signed URLs, and the API key is never sent to the storage host.
+- **No double billing:** an identical request reuses the earlier generation (`fresh: true` forces a new one). If a reused generation had failed, it is retried once.
 
 ## Performance
 
